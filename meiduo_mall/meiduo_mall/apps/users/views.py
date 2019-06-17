@@ -8,10 +8,11 @@ from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.contrib.auth import mixins
 
-import re
+import re,json
 
 from .models import User
 from meiduo_mall.utils.response_code import RETCODE
+from meiduo_mall.utils.views import LoginRequiredView
 
 
 
@@ -203,3 +204,33 @@ class InfoView(mixins.LoginRequiredMixin,View):
     # 判断用户是否登陆，如果登陆线索个人中心页面
     def get(self,request):
         return render(request, 'user_center_info.html')
+
+
+
+class EmailView(LoginRequiredView):
+    """设置用户邮箱"""
+
+    def put(self, request):
+
+        # 接收请求体中的email，body{'email':'zzxx',}
+        json_str = request.body.decode()
+        json_dict = json.loads(json_str)
+        email = json_dict.get('email')
+
+
+        # 校验邮箱
+
+        if not re.match(r'^[a-zA-Z0-9][\w\.\-]*@[a-z0-9\-]+(\.[a-z]{2-5}){1,2}$', email):
+            return http.HttpResponseForbidden("邮箱格式有误")
+
+
+        # 获取当前用户的user模型对象
+        user = request.user
+
+        user.email = email
+        user.save()
+
+
+        return http.JsonResponse({'code':RETCODE.OK, 'errmsg': '添加邮箱成功'})
+
+

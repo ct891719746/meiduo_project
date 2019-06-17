@@ -29,5 +29,8 @@ urlpatterns = [
     url(r'logout/$', views.LoginView.as_view()),
     # 用户中心
     url(r'info/$', views.InfoView.as_view()),
+    # 设置邮箱
+    url(r'^emails/$', views.EmailView.as_view())
+
 
 ]
