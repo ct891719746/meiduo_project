@@ -41,32 +41,34 @@ class AreasView(View):
 
 
                 return http.JsonResponse({'code': RETCODE.OK, 'errmsg': 'OK', 'province_list': province_list})
-            else:
-                sub_data = cache.get('sub_areas_%s' % area_id)
-                if sub_data is None:
-                    subs_qs = Area.objects.filter(parent_id=area_id)
+        else:
 
-                    try:
-                        parent_model = Area.objects.get(id = area_id)
+            sub_data = cache.get('sub_areas_%s' % area_id)
+            if sub_data is None:
+                subs_qs = Area.objects.filter(parent_id=area_id)
 
-                    except Area.DoesNotExist:
-                        return http.HttpResponseForbidden('area_id不存在')
+                try:
+                    parent_model = Area.objects.get(id = area_id)
 
-                    sub_list = []
-                    for sub_model in subs_qs:
-                        sub_list.append(
-                            {
-                                'id': sub_model.id,
-                                'name': sub_model.name
-                            }
-                        )
-
-                    sub_data = {
-                        'id': parent_model.id,
-                        'name': parent_model.name,
-                        'subs': sub_list
-                    }
-                    cache.set('sub_area_%s' % area_id, sub_data, 3600)
+                except Area.DoesNotExist:
+                    return http.HttpResponseForbidden('area_id不存在')
 
 
-                    return http.JsonResponse({'code': RETCODE.OK, 'errmsg': 'OK', 'sub_data':sub_data})
+                sub_list = []
+                for sub_model in subs_qs:
+                    sub_list.append(
+                        {
+                            'id': sub_model.id,
+                            'name': sub_model.name
+                        }
+                    )
+
+                sub_data = {
+                    'id': parent_model.id,
+                    'name': parent_model.name,
+                    'subs': sub_list
+                }
+                cache.set('sub_area_%s' % area_id, sub_data, 3600)
+
+
+            return http.JsonResponse({'code': RETCODE.OK, 'errmsg': 'OK', 'sub_data':sub_data})

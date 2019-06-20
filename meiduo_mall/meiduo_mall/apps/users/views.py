@@ -278,6 +278,8 @@ class AddressView(LoginRequiredView):
         user = request.user
 
         address_qs = Address.objects.filter(user=user,is_deleted=False)
+
+
         addresses_list = []
         for address_model in address_qs:
             addresses_list.append({
@@ -296,12 +298,13 @@ class AddressView(LoginRequiredView):
                 'email': address_model.email
             })
 
-            default_address_id = user.default_address_id
+        default_address_id = user.default_address_id
 
-            context = {
-                'addresses':addresses_list,
-                'default_address_id': default_address_id
-            }
+        context = {
+            'addresses':addresses_list,
+            'default_address_id': default_address_id
+        }
+
         return render(request, 'user_center_site.html', context)
 
 
@@ -314,6 +317,9 @@ class CreateAddressView(LoginRequiredView):
 
         if count >= 20:
             return http.JsonResponse({'code':RETCODE.THROTTLINGERR, 'errmsg':'收获地址数量超出限制'})
+
+
+
         json_dict = json.loads(request.body.decode())
         title = json_dict.get('title')
         receiver = json_dict.get('receiver')
@@ -375,3 +381,83 @@ class CreateAddressView(LoginRequiredView):
 
         # 响应
         return http.JsonResponse({'code': RETCODE.OK, 'errmsg': '添加收货地址成功', 'address': address_dict})
+
+
+class UpdateDestroyAddressView(LoginRequiredView):
+    """收货地址修改和删除"""
+
+    def put(self, request, address_id):
+
+        # 接收请求体 BOdy数据
+        json_dict = json.loads(request.body.decode())
+        title = json_dict.get('title')
+        receiver = json_dict.get('receiver')
+        province_id = json_dict.get('province_id')
+        city_id = json_dict.get('city_id')
+        district_id = json_dict.get('district_id')
+        place = json_dict.get('place')
+        mobile = json_dict.get('mobile')
+        tel = json_dict.get('tel')
+        email = json_dict.get('email')
+
+        if all([title,receiver,province_id,city_id,district_id,place,mobile]) is False:
+            return http.HttpResponseForbidden("缺少必传参数")
+
+        if not re.match(r'^1[3-9]\d{9}$', mobile):
+            return http.HttpResponseForbidden("mobile参数有误")
+
+        if tel:
+            if not re.match(r'^(0[0-9]{2,3}-)?([2-9][0-9]{6,7})+(-[0-9]{1,4})?$', tel):
+                return http.HttpResponseForbidden('tel参数有误')
+
+        if email:
+            if not re.match(r'^[a-z0-9][\w\.\-]*@a-z0-9\-]+(\.[a-z]{2,5}){1,2}$',email):
+                return http.HttpResponseForbidden('email参数有误')
+
+        try:
+            address_model = Address.objects.get(id=address_id)
+        except Address.DoesNotExist:
+            return http.HttpResponseForbidden('address_id无效')
+
+        address_model.title = title
+        address_model.receiver = receiver
+        address_model.province_id = province_id
+        address_model.city_id = city_id
+        address_model.district_id = district_id
+        address_model.place = place
+        address_model.mobile = mobile
+        address_model.tel = tel
+        address_model.email = email
+        address_model.save()
+
+        address_dict = {
+            'id': address_model.id,
+            'title': address_model.title,
+            'receiver': address_model.receiver,
+            'province_id': address_model.province_id,
+            'province': address_model.province.name,
+            'city_id': address_model.city_id,
+            'city': address_model.city.name,
+            'district_id': address_model.district_id,
+            'district': address_model.district.name,
+            'place': address_model.place,
+            'mobile': address_model.mobile,
+            'tel': address_model.tel,
+            'email': address_model.email
+        }
+
+        return http.JsonResponse({'code':RETCODE.OK, 'errmsg':'修改地址成功','address':address_dict})
+
+
+    def delete(self,request,address_id):
+        """删除收货地址"""
+        try:
+            address = Address.objects.get(id=address_id)
+        except Address.DoesNotExist:
+            return http.HttpResponseForbidden("address_id无效")
+
+        address.is_deleted = True
+        address.save()
+
+        return http.JsonResponse({'code':RETCODE.OK,'errmsg':'地址删除成功'})
+
