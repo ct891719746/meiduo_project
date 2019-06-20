@@ -12,7 +12,7 @@ from django.core.mail import send_mail
 import re,json
 from celery_tasks.email.tasks import send_verify_email
 
-from .models import User
+from .models import User,Address
 from .utils import generate_verify_email_url, check_verify_email_token
 
 
@@ -275,4 +275,103 @@ class EmailVerificationView(View):
 class AddressView(LoginRequiredView):
     """用户收货地址"""
     def get(self,request):
-        return render(request, 'user_center_site.html')
+        user = request.user
+
+        address_qs = Address.objects.filter(user=user,is_deleted=False)
+        addresses_list = []
+        for address_model in address_qs:
+            addresses_list.append({
+                'id': address_model.id,
+                'title': address_model.title,
+                'receiver': address_model.receiver,
+                'province_id': address_model.province_id,
+                'province': address_model.province.name,
+                'city_id': address_model.city_id,
+                'city': address_model.city.name,
+                'district_id': address_model.district_id,
+                'district': address_model.district.name,
+                'place': address_model.place,
+                'mobile': address_model.mobile,
+                'tel': address_model.tel,
+                'email': address_model.email
+            })
+
+            default_address_id = user.default_address_id
+
+            context = {
+                'addresses':addresses_list,
+                'default_address_id': default_address_id
+            }
+        return render(request, 'user_center_site.html', context)
+
+
+
+class CreateAddressView(LoginRequiredView):
+    """新增收获地址"""
+
+    def post(self,request):
+        count = Address.objects.filter(user=request.user, is_deleted=False).count()
+
+        if count >= 20:
+            return http.JsonResponse({'code':RETCODE.THROTTLINGERR, 'errmsg':'收获地址数量超出限制'})
+        json_dict = json.loads(request.body.decode())
+        title = json_dict.get('title')
+        receiver = json_dict.get('receiver')
+        province_id = json_dict.get('province_id')
+        city_id = json_dict.get('city_id')
+        district_id = json_dict.get('district_id')
+        place = json_dict.get('place')
+        mobile = json_dict.get('mobile')
+        tel = json_dict.get('tel')
+        email = json_dict.get('email')
+
+        # 校验
+        if all([title, receiver, province_id, city_id, district_id, place, mobile]) is False:
+            return http.HttpResponseForbidden('缺少必传参数')
+
+        if not re.match(r'^1[3-9]\d{9}$', mobile):
+            return http.HttpResponseForbidden('参数mobile有误')
+        if tel:
+            if not re.match(r'^(0[0-9]{2,3}-)?([2-9][0-9]{6,7})+(-[0-9]{1,4})?$', tel):
+                return http.HttpResponseForbidden('参数tel有误')
+        if email:
+            if not re.match(r'^[a-z0-9][\w\.\-]*@[a-z0-9\-]+(\.[a-z]{2,5}){1,2}$', email):
+                return http.HttpResponseForbidden('参数email有误')
+        # 新增收货地址
+        address_model = Address.objects.create(
+            user=request.user,
+            title=title,
+            receiver=receiver,
+            province_id=province_id,
+            city_id=city_id,
+            district_id=district_id,
+            place=place,
+            mobile=mobile,
+            tel=tel,
+            email=email
+        )
+
+        # 如果当前用户还没有默认收货地址,就把当前新增的收货地址直接设置为它的默认地址
+        if request.user.default_address is None:
+            request.user.default_address = address_model
+            request.user.save()
+
+        # 把新增的收货地址再转换成字典响应回去
+        address_dict = {
+            'id': address_model.id,
+            'title': address_model.title,
+            'receiver': address_model.receiver,
+            'province_id': address_model.province_id,
+            'province': address_model.province.name,
+            'city_id': address_model.city_id,
+            'city': address_model.city.name,
+            'district_id': address_model.district_id,
+            'district': address_model.district.name,
+            'place': address_model.place,
+            'mobile': address_model.mobile,
+            'tel': address_model.tel,
+            'email': address_model.email
+        }
+
+        # 响应
+        return http.JsonResponse({'code': RETCODE.OK, 'errmsg': '添加收货地址成功', 'address': address_dict})

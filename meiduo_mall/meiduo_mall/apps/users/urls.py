@@ -38,4 +38,8 @@ urlpatterns = [
     # 收货地址
     url(r'^addresses/$', views.AddressView.as_view()),
 
+    # 新增收获地址
+    url(r'^addresses/create/$', views.CreateAddressView.as_view()),
+
+
 ]
