@@ -30,7 +30,12 @@ urlpatterns = [
     # 用户中心
     url(r'info/$', views.InfoView.as_view()),
     # 设置邮箱
-    url(r'^emails/$', views.EmailView.as_view())
+    url(r'^emails/$', views.EmailView.as_view()),
 
+    # 激活邮箱
+    url(r'^emails/verification/$', views.EmailVerificationView.as_view()),
+
+    # 收货地址
+    url(r'^addresses/$', views.AddressView.as_view()),
 
 ]

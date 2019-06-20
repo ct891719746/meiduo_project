@@ -7,10 +7,16 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.contrib.auth import mixins
+from django.core.mail import send_mail
 
 import re,json
+from celery_tasks.email.tasks import send_verify_email
 
 from .models import User
+from .utils import generate_verify_email_url, check_verify_email_token
+
+
+
 from meiduo_mall.utils.response_code import RETCODE
 from meiduo_mall.utils.views import LoginRequiredView
 
@@ -220,7 +226,7 @@ class EmailView(LoginRequiredView):
 
         # 校验邮箱
 
-        if not re.match(r'^[a-zA-Z0-9][\w\.\-]*@[a-z0-9\-]+(\.[a-z]{2-5}){1,2}$', email):
+        if not re.match(r'^[a-z0-9][\w\.\-]*@[a-z0-9\-]+(\.[a-z]{2,5}){1,2}$', email):
             return http.HttpResponseForbidden("邮箱格式有误")
 
 
@@ -230,7 +236,43 @@ class EmailView(LoginRequiredView):
         user.email = email
         user.save()
 
+        # 生成邮箱激活url
+        verify_url = generate_verify_email_url(user)
+        # celery进行异步发送邮件
+        send_verify_email.delay(email, verify_url)
+
 
         return http.JsonResponse({'code':RETCODE.OK, 'errmsg': '添加邮箱成功'})
 
 
+
+class EmailVerificationView(View):
+    """激活邮箱"""
+
+    def get(self,request):
+        # 获取url查询参数
+        token = request.GET.get('token')
+
+        if token is None:
+            return http.HttpResponseForbidden('缺少token参数')
+
+
+        # 对token进行解密并查询到要激活邮箱的那个用户
+        user = check_verify_email_token(token)
+
+        # 如果没有查询到user，提前响应
+
+        if user is None:
+            return http.HttpResponseForbidden("token无效")
+
+        user.email_active = True
+
+        user.save()
+
+        return redirect('/info/')
+
+
+class AddressView(LoginRequiredView):
+    """用户收货地址"""
+    def get(self,request):
+        return render(request, 'user_center_site.html')

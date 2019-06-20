@@ -53,7 +53,10 @@ INSTALLED_APPS = [
     # 注册用户模块
     'users.apps.UsersConfig',
     # qq 模块
-    'oauth.apps.OauthConfig'
+    'oauth.apps.OauthConfig',
+    # 省市区模型
+    'areas.apps.AreasConfig',
+
 
 ]
 
@@ -229,3 +232,29 @@ LOGIN_URL = '/login/'
 QQ_CLIENT_ID = '101518219'
 QQ_CLIENT_SECRET = '418d84ebdc7241efb79536886ae95224'
 QQ_REDIRECT_URI = 'http://www.meiduo.site:8000/oauth_callback'
+
+# # # 邮箱配置
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'  # 指定邮件后端
+# EMAIL_HOST = 'smtp.163.com'  # 发邮件主机
+# EMAIL_PORT = 25  # 发邮件端口
+# EMAIL_HOST_USER = 'itcast99@163.com'  # 授权的邮箱
+# EMAIL_HOST_PASSWORD = 'python99'  # 邮箱授权时获得的密码，非注册登录密码
+# EMAIL_FROM = '美多商城<itcast99@163.com>'  # 发件人抬头
+
+# 邮箱验证链接
+EMAIL_VERIFY_URL = 'http://www.meiduo.site:8000/emails/verification/'
+
+
+
+
+
+# # 邮箱配置
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'  # 指定邮件后端
+EMAIL_HOST = 'smtp.qq.com'  # 发邮件主机
+EMAIL_PORT = 465  # 发邮件端口
+EMAIL_HOST_USER = 'chentao909@qq.com'  # 授权的邮箱
+EMAIL_HOST_PASSWORD = 'jbrwnstrrskubbgc'  # 邮箱授权时获得的密码，非注册登录密码
+EMAIL_FROM = '美多商城<chentao909@qq.com>'  # 发件人抬头
+
+#
+# EMAIL_VERIFY_URL = 'http://www.meiduo.site:8000/emails/verification/'
