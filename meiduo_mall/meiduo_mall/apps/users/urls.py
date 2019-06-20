@@ -44,7 +44,10 @@ urlpatterns = [
     # 修改和删除收货地址
 
     url(r'addresses/(?P<address_id>\d+)/$', views.UpdateDestroyAddressView.as_view()),
-
+    # 修改收货地址标题
+    url(r'^addresses/(?P<address_id>\d+)/title/$',views.UpdateDestroyAddressView.as_view()),
+    # 设置默认收货地址
+    url(r'^addresses/(?P<address_id>\d+)/default/$', views.DefaultAddressView.as_view())
 
 
 ]

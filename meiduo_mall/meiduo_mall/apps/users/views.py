@@ -461,3 +461,40 @@ class UpdateDestroyAddressView(LoginRequiredView):
 
         return http.JsonResponse({'code':RETCODE.OK,'errmsg':'地址删除成功'})
 
+
+class UpdateAddressTitleView(LoginRequiredView):
+    """修改收货地址标题"""
+
+    def put(self,request, address_id):
+        json_dict = json.loads(request.body.decode())
+        title = json_dict.get('title')
+
+
+        try:
+            address = Address.objects.get(id=address_id)
+
+        except Address.DoesNotExist:
+            return http.HttpResponseForbidden('address_id无效')
+
+        address.title = title
+        address.save()
+
+        return http.JsonResponse({'code':RETCODE.OK,'errmsg':'OK'})
+
+
+class DefaultAddressView(LoginRequiredView):
+    """设置用户默认收货地址"""
+
+    def put(self, request, address_id):
+        try:
+            address = Address.objects.get(id = address_id)
+        except Address.DoesNotExist:
+            return http.HttpResponseForbidden('address_id无效')
+
+
+        user = request.user
+
+        user.default_address = address
+        user.save()
+
+        return http.JsonResponse({'code':RETCODE.OK,'errmsg':'OK'})
