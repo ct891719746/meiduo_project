@@ -56,6 +56,11 @@ INSTALLED_APPS = [
     'oauth.apps.OauthConfig',
     # 省市区模型
     'areas.apps.AreasConfig',
+    # 首页广告模块
+    'contents.apps.ContentsConfig',
+    # 商品模块
+    'goods.apps.GoodsConfig',
+
 
 
 ]

@@ -415,7 +415,8 @@ class UpdateDestroyAddressView(LoginRequiredView):
                 return http.HttpResponseForbidden('email参数有误')
 
         try:
-            address_model = Address.objects.get(id=address_id)
+            address_model = Address.objects.get(id=address_id, user=request.user, is_deleted=False)
+
         except Address.DoesNotExist:
             return http.HttpResponseForbidden('address_id无效')
 
@@ -498,3 +499,40 @@ class DefaultAddressView(LoginRequiredView):
         user.save()
 
         return http.JsonResponse({'code':RETCODE.OK,'errmsg':'OK'})
+
+class ChangePasswordView(LoginRequiredView):
+    """修改用户密码"""
+
+    def get(self, request):
+        return render(request, 'user_center_pass.html')
+
+    def post(self,request):
+        """修改密码逻辑"""
+
+        query_dict = request.POST
+
+        old_pwd = query_dict.get('old_pwd')
+        new_pwd = query_dict.get('new_pwd')
+        new_cpwd = query_dict.get('new_cpwd')
+
+
+        if all([old_pwd,new_pwd,new_cpwd]) is False:
+
+            return http.HttpResponseForbidden("缺少必传参数")
+
+        user = request.user
+        if user.check_password((old_pwd)) is False:
+            return render(request, 'user_center_pass.html',{'origin_pwd_errmsg': '初始密码错误'})
+
+        if not re.match(r'^[0-9a-zA-Z]{8,20}$',new_pwd):
+            return http.HttpResponseForbidden("密码最少8位，最长20位")
+
+        if new_pwd != new_cpwd:
+            return http.HttpResponseForbidden('俩次输入的密码不一致')
+
+
+
+        user.set_password(new_pwd)
+        user.save()
+
+        return redirect('/logout/')
