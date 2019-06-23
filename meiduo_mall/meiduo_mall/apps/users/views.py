@@ -11,6 +11,7 @@ from django.core.mail import send_mail
 
 import re,json
 from celery_tasks.email.tasks import send_verify_email
+from goods.models import SKU
 
 from .models import User,Address
 from .utils import generate_verify_email_url, check_verify_email_token
@@ -536,3 +537,55 @@ class ChangePasswordView(LoginRequiredView):
         user.save()
 
         return redirect('/logout/')
+
+
+class UserBrowseHistory(View):
+    """用户浏览记录"""
+
+    def post(self,request):
+        """保存用户浏览记录"""
+        # 接收参数
+        if request.user.is_authenticated:
+            json_dict = json.loads(request.body.decode())
+            sku_id = json_dict.get('sku_id')
+
+
+            try:
+                sku = SKU.objects.get(id=sku_id)
+            except SKU.DoesNotExist:
+                return http.HttpResponseForbidden('sku_id不存在')
+
+
+
+            # 创建redis　连接对象
+            redis_conn = get_redis_connection('history')
+            pl = redis_conn.pipeline()
+            user = request.user
+            key = 'history_%s' % user.id
+
+            # 去重
+            pl.lrem(key,0,sku_id)
+
+            # 插开列表开头
+            pl.lpush(key, sku_id)
+
+            # 只保留前五个元素
+            pl.lrem(key,0,4)
+            pl.execute()
+
+
+            # 响应
+            return http.JsonResponse({'code':RETCODE.OK,'errmsg':'OK'})
+
+
+        else:
+            return http.JsonResponse({'code':RETCODE.SESSIONERR,'errmsg':"用户未登录"})
+
+
+
+
+
+
+
+
+

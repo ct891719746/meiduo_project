@@ -1,4 +1,5 @@
 from django.shortcuts import render
+from django.utils import timezone
 from django.views import View
 from django import http
 from django.core.paginator import Paginator,EmptyPage
@@ -6,7 +7,7 @@ from django.core.paginator import Paginator,EmptyPage
 from contents.utils import get_categories
 from meiduo_mall.utils.response_code import RETCODE
 from .utils import get_breadcrumb
-from .models import GoodsCategory,SKU
+from .models import GoodsCategory, SKU, GoodsVisitCount
 
 
 class ListView(View):
@@ -101,13 +102,13 @@ class DetailView(View):
         category = sku.category
         # 获取当前对象的SPU
         spu = sku.spu
-          # 当前商品的规格选项列表
+         #  1 # 当前商品的规格选项列表
         current_sku_spec_qs = sku.specs.order_by('spec_id')
         current_sku_option_ids = []
         for current_sku_spec in current_sku_spec_qs:
             current_sku_option_ids.append(current_sku_spec.option_id)
             
-
+            # 2构造规格选择仓库
         temp_sku_qs = spu.sku_set.all()
         # 选项仓库大字典
         spec_sku_map = {}
@@ -120,14 +121,61 @@ class DetailView(View):
             spec_sku_map[tuple(temp_sku_option_ids)] = temp_sku.id
 
 
-
+        #　组合并找到ｓｋｕ_id绑定
         spu_spec_qs = spu.specs.order_by('id')
 
-        for index, spec in enumerate(spu_spec_qs):
-            pass
+        for index, spec in enumerate(spu_spec_qs): # 遍历当前所有的规格
+            spec_option_qs = spec.options.all()   # 获取当前规格中的所有选项
+            temp_option_ids = current_sku_option_ids[:]  # 复制一个新的当前显示商品的规格选项列表
+            for option in spec_option_qs:               # 遍历当前规格下的所有选项
+                temp_option_ids[index] = option.id
+                option.sku_id = spec_sku_map.get(tuple(temp_option_ids))  #  给每个选项绑定sku_id属性
+
+            spec.spec_options = spec_option_qs      # 把规格下的所有选项绑定到规格对象的spec_options属性上
 
 
 
+        context = {
+            'categories': get_categories(),
+            'breadcrumb':get_breadcrumb(category),
+            'sku':sku,
+            'category': category,
+            'spu':spu,
+            'spec_qs':spu_spec_qs,
+        }
+
+        return render(request,'detail.html',context)
 
 
 
+class DetailVisitView(View):
+    """定义商品类别访问类"""
+
+    def post(self,request,category_id):
+        # 记录分类商品访问量
+        try:
+            category = GoodsCategory.objects.get(id=category_id)
+        except GoodsCategory.DoesNotExist:
+            return http.HttpResponseForbidden('category_id不存在')
+
+
+
+        data = timezone.now()
+
+        # 以当前日期及指定类别去查询,如果查询出来,说明此类别今天已经访问,已经访问就直接修改它的count
+        try:
+
+            goodsvisit = GoodsVisitCount.objects.get(category=category,data=data)
+
+
+            # 如果没有查询出来,说明今天这个类别的商品还没有访问过,第一次访问,新增记录
+        except GoodsVisitCount.DoesNotExist:
+            goodsvisit = GoodsVisitCount(
+                category=category
+            )
+
+        goodsvisit.count += 1
+        goodsvisit.save()
+
+
+        return http.JsonResponse({'code':RETCODE.OK,'errmsg':'OK'})
