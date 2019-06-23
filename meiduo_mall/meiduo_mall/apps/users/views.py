@@ -583,9 +583,27 @@ class UserBrowseHistory(View):
 
 
 
+    def get(self,request):
+        """查询商品浏览次数"""
+        # 判断当前用户是否登录
+        if request.user.is_authenticated:
+            redis_conn = get_redis_connection('history')
+            sku_ids = redis_conn.lrange('history_%s' % request.user.id,0,-1)
 
+            sku_list = []
 
+            for sku_id in sku_ids:
+                sku = SKU.objects.get(id=sku_id)
+                sku_list.append({
+                    'id': sku.id,
+                    'name': sku.name,
+                    'default_image_url': sku.default_image.url,
+                    'price': sku.price
+                })
 
+            return http.JsonResponse({'code':RETCODE.OK,'errmsg':'OK','skus':sku_list})
 
-
+        else:
+            return http.JsonResponse({'code':RETCODE.OK,'errmsg':'未登录用户','skus':[]})
+            pass
 
