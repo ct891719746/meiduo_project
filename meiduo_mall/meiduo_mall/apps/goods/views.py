@@ -160,22 +160,22 @@ class DetailVisitView(View):
 
 
 
-        data = timezone.now()
+        date = timezone.now()
 
         # 以当前日期及指定类别去查询,如果查询出来,说明此类别今天已经访问,已经访问就直接修改它的count
         try:
 
-            goodsvisit = GoodsVisitCount.objects.get(category=category,data=data)
+            goods_visit = GoodsVisitCount.objects.get(category=category,date=date)
 
 
             # 如果没有查询出来,说明今天这个类别的商品还没有访问过,第一次访问,新增记录
         except GoodsVisitCount.DoesNotExist:
-            goodsvisit = GoodsVisitCount(
+            goods_visit = GoodsVisitCount(
                 category=category
             )
 
-        goodsvisit.count += 1
-        goodsvisit.save()
+        goods_visit.count += 1
+        goods_visit.save()
 
 
         return http.JsonResponse({'code':RETCODE.OK,'errmsg':'OK'})

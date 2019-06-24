@@ -15,5 +15,5 @@ print(ret)
  'Status': 'Upload successed.',
  'Local file name': '/home/python/Desktop/02.jpg',
  'Uploaded size': '14.00KB',
- 'Storage IP': '192.168.207.128'
+ 'Storage IP': '192.168.48.128'
 }

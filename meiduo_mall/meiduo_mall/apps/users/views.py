@@ -605,5 +605,5 @@ class UserBrowseHistory(View):
 
         else:
             return http.JsonResponse({'code':RETCODE.OK,'errmsg':'未登录用户','skus':[]})
-            pass
+
 
