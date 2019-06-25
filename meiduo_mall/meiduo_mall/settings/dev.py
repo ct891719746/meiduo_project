@@ -180,14 +180,14 @@ CACHES = {
     },
     "history": {  # 存储商品浏览记录
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://192.168.103.210:6379/3",
+        "LOCATION": "redis://127.0.0.1:6379/3",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         }
     },
     "carts": {  # 存储登录用户购物车数据
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://192.168.103.210:6379/4",
+        "LOCATION": "redis://127.0.0.1:6379/4",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         }
