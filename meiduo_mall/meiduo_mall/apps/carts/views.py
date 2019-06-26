@@ -163,7 +163,7 @@ class CartsView(View):
             cart_skus.append({
                 'id':sku.id,
                 'name':sku.name,
-                'default_image_url': sku.default_image,
+                'default_image_url': sku.default_image.url,
                 'price':str(sku.price),
                 'count':cart_dict[sku.id]['count'],
                 'selected':str(cart_dict[sku.id]['selected']),
@@ -171,7 +171,119 @@ class CartsView(View):
             }
             )
 
+
         return render(request,'cart.html',{'cart_skus':cart_skus})
+
+    def put(self,request):
+        """修改购物车逻辑"""
+        #　接收请求提数据
+        json_dict = json.loads(request.body.decode())
+        sku_id = json_dict.get('sku_id')
+        count = json_dict.get('count')
+        selected = json_dict.get('selected')
+
+        if all([sku_id,count]) is False:
+            return http.HttpResponseForbidden("缺少必传参数")
+
+
+        try:
+            sku = SKU.objects.get(id=sku_id)
+        except SKU.DoesNotExist:
+            return http.HttpResponseForbidden('sku_id不存在')
+
+        try:
+            count = int(count)
+
+        except Exception:
+            return http.HttpResponseForbidden('参数类型错误')
+
+        if count <0 or isinstance(selected,bool) is False:
+            return http.HttpResponseForbidden('参数类型有误')
+
+        user = request.user
+        cart_sku = {
+            'id': sku.id,
+            'name':sku.name,
+            'default_image_url':sku.default_image,
+            'price':str(sku.price),
+            'count':count,
+            'selected':selected,
+            'amount':str(sku.price * count)
+
+        }
+        response = http.JsonResponse({'code': RETCODE.OK, 'errmsg': '修改購物車中商品數據成功'})
+        if user.is_authenticated:
+
+            redis_conn = get_redis_connection('carts')
+
+            pl = redis_conn.pipeline()
+
+            pl.hset('carts_%s' % user.id, sku_id, count)
+
+            if selected:
+                pl.sadd('selected_%s' % user.id, sku_id)
+
+            else:
+                pl.srem('selected_%s' % user.id, sku_id)
+
+            pl.execute()
+
+        else:
+
+            # 未登录操作cookie购物车数据
+            cart_str = request.COOKIES.get('carts')
+
+            # 判断是否有cookie
+            if cart_str:
+                cart_dict = pickle.loads(base64.b64decode(cart_str.encode()))
+            else:
+                return render(request,'cart.html')
+
+            # 直接新数据覆盖cookie大字典旧数据
+            cart_dict[sku_id] = {
+                'count': count,
+                'selected': selected
+            }
+            # 将字典转换成字符串
+            cart_str = base64.b64encode(pickle.dumps(cart_dict)).decode()
+            # 创建响应对象
+
+            response.set_cookie('carts',cart_str)
+
+        return response
+
+    def delete(self,request):
+        """刪除商品"""
+
+        # 接收
+        json_dict = json.loads(request.body.decode())
+        sku_id = json_dict.get('sku_id')
+
+        # 校验
+        try:
+            sku_id = SKU.objects.get(id=sku_id)
+        except SKU.DoesNotExist:
+            return http.HttpResponseForbidden('sku_id不存在')
+
+        # 获取user；
+        user = request.user
+
+        # 判断
+        if user.is_authenticated:
+            redis_conn = get_redis_connection('carts')
+
+            pl = redis_conn.pipeline()
+            pl.hdel('carts_%s' % user.id,sku_id)
+            pl.srem('selected_%s' % user.id,sku_id)
+
+            pl.execute()
+
+            return http.JsonResponse({'code':RETCODE.OK,'errmsg':'删除购物车商品成功'})
+
+        else:
+            pass
+
+
 
 
 
