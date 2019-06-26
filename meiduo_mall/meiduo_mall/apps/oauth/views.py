@@ -9,6 +9,7 @@ from QQLoginTool.QQtool import OAuthQQ
 
 from meiduo_mall.utils.response_code import RETCODE
 from users.models import User
+from carts.utils import merge_cart_cookie_to_redis
 
 from .models import OAuthQQUser
 from .utils import generate_openid_signature,check_openid_signature
@@ -95,6 +96,8 @@ class QQAuthView(View):
             # 在cookie中存储username
             response.set_cookie('username', user.username, max_age=settings.SESSION_COOKIE_AGE)
 
+            merge_cart_cookie_to_redis(request,response)
+
             return response
 
     def post(self,request):
@@ -169,6 +172,8 @@ class QQAuthView(View):
         response = redirect(request.GET.get('state', '/'))
 
         response.set_cookie('username',user.username, max_age=settings.SESSION_COOKIE_AGE)
+
+        merge_cart_cookie_to_redis(request,response)
 
         return response
 

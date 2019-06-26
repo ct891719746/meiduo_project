@@ -9,13 +9,12 @@ from django.utils.decorators import method_decorator
 from django.contrib.auth import mixins
 from django.core.mail import send_mail
 
-import re,json
+import re, json
 from celery_tasks.email.tasks import send_verify_email
 from goods.models import SKU
-
+from carts.utils import merge_cart_cookie_to_redis
 from .models import User,Address
 from .utils import generate_verify_email_url, check_verify_email_token
-
 
 
 from meiduo_mall.utils.response_code import RETCODE
@@ -164,6 +163,9 @@ class LoginView(View):
         response = redirect(request.GET.get('next', '/'))
 
         response.set_cookie('username',user.username, max_age=(settings.SESSION_COOKIE_AGE if remembered else None))
+
+        merge_cart_cookie_to_redis(request, response)
+
         return response
 
 
