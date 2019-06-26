@@ -281,7 +281,39 @@ class CartsView(View):
             return http.JsonResponse({'code':RETCODE.OK,'errmsg':'删除购物车商品成功'})
 
         else:
-            pass
+            # 未登录用户操作cookie购物车数据
+            # 获取cookie购物车数据
+            cart_str = request.COOKIES.get('carts')
+
+            # 判断是否获取到cookie数据
+            if cart_str:
+
+                # 如果有cookie购物车数据将字符串转换成字典
+                cart_dict = pickle.loads(base64.b64decode(cart_str.encode()))
+                # 如果没有cookie购物车数据,提前响应
+            else:
+                return http.HttpResponseForbidden('缺少cookie数据')
+
+            # 把当前sku_id对就的键值对从cart_dict删除
+            if sku_id in cart_dict:
+                # 判断当前要删除的商品存在时,再去删除
+                del cart_dict[sku_id]
+
+            # 创建响应对象
+            response = http.JsonResponse({'code':RETCODE.OK,'errmsg':'购物车商品删除成功'})
+            # 如果当前cookie购物车数据已经全部删除了
+            if not cart_dict:
+                # 直接把cookie中的购物车数据删除.
+                response.delete_cookie('carts')
+                return response
+            # 把字典再转回字符串
+            cart_str = base64.b64encode(pickle.dumps(cart_dict)).decode()
+
+            # 设置cookie
+            response.set_cookie('carts',cart_str)
+            # 响应
+            return response
+
 
 
 
